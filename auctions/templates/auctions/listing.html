@@ -1,0 +1,163 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+<h2>Listing: {{ listing.title }}</h2>
+
+{% if listing.winned_by %}
+<div class="alert alert-success">
+    {% if listing.winned_by.username == user.username %}
+    <h3>Won by: You</h3>
+    {% else %}
+    <h3>Won by: {{ listing.winned_by.username }}</h3>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if user.is_authenticated and listing.winned_by is None and user.id != listing.listed_by.id %}
+{% if watchlist is None %}
+<form action="{% url 'add_watchlist' %}" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="added_item" value="{{ listing.id }}">
+    <input type="hidden" name="added_by" value="{{ user.id }}">
+    <button class="btn btn-secondary btn-sm">Watchlist</button>
+</form>
+{% else %}
+<form action="{% url 'delete_watchlist' %}" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="added_item" value="{{ listing.id }}">
+    <input type="hidden" name="added_by" value="{{ user.id }}">
+    <button class="btn btn-warning btn-sm">Remove Watchlist</button>
+</form>
+{% endif %}
+{% endif %}
+
+
+{% if listing.image_url %}
+<img src="{{ listing.image_url }}" alt="{{ listing.title }}" class="w-100" style="height: 400px; object-fit: contain;">
+{% endif %}
+
+<p>{{ listing.description }}</p>
+<h2>${{ listing.price|floatformat:2 }}</h2>
+
+{% if user.is_authenticated and user.id == listing.listed_by.id and listing.active and listing.winned_by is None %}
+<hr>
+<form action="{% url 'close_listing' listing.id %}" method="post">
+    {% csrf_token %}
+    <p>The highest bidder will win (<small>if there is no bid on the listing then the status will become
+            inactive</small>)
+    </p>
+    <button class="btn btn-danger">Close this Listing</button>
+</form>
+<hr>
+{% endif %}
+
+{% if user.is_authenticated and user.id == listing.listed_by.id and listing.active and listing.winned_by is None %}
+<form action="{% url 'inactive_listing' listing.id %}" method="post">
+    {% csrf_token %}
+    <button class="btn btn-danger">Inactive this Listing</button>
+</form>
+<hr>
+{% else %}
+{% if user.is_authenticated and user.id == listing.listed_by.id and not listing.active and listing.winned_by is None %}
+<form action="{% url 'active_listing' listing.id %}" method="post">
+    {% csrf_token%}
+    <button class="btn btn-success">Active this Listing</button>
+</form>
+<hr>
+{% endif %}
+{% endif %}
+
+<small class="text-muted">{{ numBids }} bid(s) so far. Your bid is the current bid.</small>
+
+{% if listing.active and listing.listed_by.id != user.id and listing.winned_by is None %}
+
+{% if not user.is_authenticated %}
+<p class="alert alert-info my-2">Not Logged In</p>
+{% else %}
+
+{% if error == 'value_less' %}
+<div class="alert alert-danger">You have enter value less than the {{ maxBid }}</div>
+{% endif %}
+
+<form action="{% url 'create_bid' listing.id %}" method="post" class="py-1">
+    {% csrf_token %}
+    <input type="number" min="{{ maxBid }}" name="bid" placeholder="Bid" class="form-control my-1">
+    <button class="btn btn-primary my-1">Place Bid</button>
+</form>
+{% endif %}
+
+{% else %}
+{% if not listing.active %}
+<p class="alert alert-danger my-2">Not Active Currently</p>
+{% endif %}
+
+{% if listing.listed_by.id == user.id %}
+<p class="alert alert-secondary my-2">You cannot bid on your own listed item</p>
+{% endif %}
+
+{% if not user.is_authenticated %}
+<p class="alert alert-info my-2">Not Logged In</p>
+{% endif %}
+{% endif %}
+
+<h4><u>Bids on this listing are:</u></h4>
+<ul>
+    {% for bid in bids %}
+    <li>
+        Bid of <strong>{{ bid.bid }}</strong> -
+        <small>by <span class="text-success">{{ bid.bid_by }}</span></small>
+    </li>
+    {% empty %}
+    <li>
+        <div class="alert alert-info">No bid on this listing</div>
+    </li>
+    {% endfor %}
+</ul>
+
+<hr>
+
+<div>
+    <h3>Details</h3>
+    <ul>
+        <li>Listed by: <a href="{% url 'user_listing' listing.listed_by.id %}">{{ listing.listed_by }}</a></li>
+        <li>Category: {% if listing.category %}
+            <a href="{% url 'get_category' listing.category.id %}">{{ listing.category }}</a>
+            {% else %}
+            No Category Listed
+            {% endif %}
+        </li>
+    </ul>
+</div>
+
+<hr>
+
+<div>
+    <h3>Comments</h3>
+    {% if user.is_authenticated %}
+    <form action="{% url 'add_comment' listing.id %}" method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <textarea name="comment" rows="5" class="form-control" placeholder="Enter Comment" required></textarea>
+        </div>
+        <button class="btn-secondary">Add Comment</button>
+    </form>
+    {% else %}
+    <a href="{% url 'login' %}" class="btn btn-success">You have to sign in in order to comment on this listing</a>
+    {% endif %}
+    <ul class="my-3">
+        {% for comment in comments %}
+        <li>
+            {{ comment.comments }} -
+            <small>comment by:
+                <span class="text-success">
+                    {{ comment.comment_by}}
+                </span>
+            </small>
+        </li>
+        {% empty %}
+        <li><strong>No comment on this listing</strong></li>
+        {% endfor %}
+    </ul>
+</div>
+
+{% endblock %}

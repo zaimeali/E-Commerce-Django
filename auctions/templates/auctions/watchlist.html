@@ -1,0 +1,32 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+<h2>Your Watchlist</h2>
+
+{% for listing in listing_items %}
+<div class="d-flex flex-row justify-content-between border border-secondary rounded w-100 m-2 p-2">
+    {% if listing.image_url%}
+    <div>
+        <a href="{% url 'listing' listing.id %}">
+            <img style="width: 200px; height: 200px; object-fit: contain;" src="{{ listing.image_url }}"
+                alt="{{ listing.title }}">
+        </a>
+    </div>
+    {% endif %}
+    <div style="flex-grow: 1;" class="px-5 d-flex flex-column">
+        <h3><a href="{% url 'listing' listing.id %}" class="text-dark">{{ listing.title }}</a></h3>
+        <p><b>Price:</b> ${{ listing.price|floatformat:2 }}</p>
+        <p><small class="text-muted">Created {{ listing.created_at|date:'M. d, Y, H:i' }}</small></p>
+        {% if not listing.active %}
+        <p class="alert alert-danger">Not Active</p>
+        {% endif %}
+        {% if listing.winned_by %}
+        <p class="alert alert-success">This listing is won by {{ listing.winned_by.username }}</p>
+        {% endif %}
+    </div>
+</div>
+{% empty %}
+<div class="alert alert-info">Empty Watchlist</div>
+{% endfor %}
+
+{% endblock %}
